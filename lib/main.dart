@@ -60,8 +60,6 @@ class _MyHomePageState extends State<MyHomePage> {
         await FilePicker.platform.pickFiles(type: FileType.media);
     img = File(result.files.single.path);
     InfoAboutFile();
-
-    crpImg = img;
   }
 
   void funcForImage() async {
@@ -74,48 +72,68 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void funcForVideo(String pathToFile, int width, int q) {
     log('funcForVideo!');
-    if (ImageInfo.decodedImage.height > width ||
-        ImageInfo.decodedImage.width > width) {
-      //cropItCauseItsBIG
-      _flutterFFmpeg.execute("-i " +
-          pathToFile +
-          " -crf " +
-          q.toString() +
-          'filter:v "crop=w=' +
-          width.toString() +
-          ":h=" +
-          width.toString() +
-          ':x=0;y=0" ' +
-          pathToFile +
-          ".mp4");
-    } else {
-      //ITS small we will make it large
-      //after that, we crop it
+    //if (ImageInfo.decodedImage.height > width ||
+    //    ImageInfo.decodedImage.width > width) {
+    //cropItCauseItsBIG
+    _flutterFFmpeg
+        .execute("-i " +
+            pathToFile +
+            " -q " +
+            q.toString() +
+            ' -filter:v "crop=' +
+            width.toString() +
+            ":" +
+            width.toString() +
+            ':0:0" -y ' +
+            pathToFile +
+            ".mp4")
+        .then((value) => {
+              log(value.toString()),
+              setState(() {
+                Info = "Was: " +
+                    File(pathToFile).lengthSync().toString() +
+                    " AFTER: " +
+                    File(pathToFile + ".mp4").lengthSync().toString() +
+                    "\nCode: $value";
 
-      //make it bigger
-      _flutterFFmpeg.execute("-i " +
-          pathToFile +
-          'filter:v "scale=w=' +
-          width.toString() +
-          ':h=-1" ' +
-          pathToFile +
-          ".mp4");
-      //after that
-      //crop
-      pathToFile += ".mp4";
-      _flutterFFmpeg.execute("-i " +
-          pathToFile +
-          " -crf " +
-          q.toString() +
-          ' filter:v "crop=w=' +
-          width.toString() +
-          ":h=" +
-          width.toString() +
-          ':x=0;y=0" ' +
-          pathToFile +
-          ".mp4");
-    }
-    log("PATH TO FILE IS " + pathToFile + ".mp4");
+                log("PATH TO FILE IS " + pathToFile + ".mp4");
+              })
+            });
+
+    //} else {
+    //ITS small we will make it large
+    //after that, we crop it
+
+    //make it bigger
+    // _flutterFFmpeg.execute("-i " +
+    //     pathToFile +
+    //     'filter:v "scale=w=' +
+    //     width.toString() +
+    //     ':h=-1" ' +
+    //     pathToFile +
+    //     ".mp4");
+    // //after that
+    // //crop
+    // pathToFile += ".mp4";
+
+    // _flutterFFmpeg.execute("-i " +
+    //     pathToFile +
+    //     " -q " +
+    //     q.toString() +
+    //     ' filter:v "crop=w=' +
+    //     width.toString() +
+    //     ":h=" +
+    //     width.toString() +
+    //     ':x=0;y=0" ' +
+    //     pathToFile +
+    //     ".mp4");
+    // setState(() {
+    //   Info = "Was: " +
+    //       File(pathToFile).lengthSync().toString() +
+    //       " AFTER: " +
+    //       File(pathToFile + ".mp4").lengthSync().toString();
+    // });
+    //}
   }
 
   void InfoAboutFile() async {
@@ -124,26 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ImageInfo.sizeKB = img.lengthSync() / 1024;
       ImageInfo.name = img.path.split('/').last;
       ImageInfo.ext = ImageInfo.name.split('.').last;
-      ImageInfo.decodedImage = await decodeImageFromList(img.readAsBytesSync());
-      log(ImageInfo.name.split('.').last);
-      if (ImageInfo.name.split('.').last == 'png' ||
-          ImageInfo.name.split('.').last == 'jpg' ||
-          ImageInfo.name.split('.').last == 'jpeg') {
-        ImageInfo.whatIsIt = 'Image';
-        canIWorkWithImg = true;
-        canIWorkWithVid = false;
-        for (int i = 0; i < 5; i++) log('its an image!');
-        funcForImage();
-      } else {
-        ImageInfo.whatIsIt = 'Video';
-        for (int i = 0; i < 5; i++) log('Its a video!');
-        canIWorkWithImg = false;
-        canIWorkWithVid = true;
-        funcForVideo(img.absolute.path, 200, 48);
-      }
-
       ImageInfo.path = img.absolute.path;
-
       setState(() {
         Info = 'Size (KB): ' +
             (img.lengthSync() / 1024).toString() +
@@ -152,6 +151,26 @@ class _MyHomePageState extends State<MyHomePage> {
             img.path.split('/').last.split('.').last;
       });
       print(Info);
+      log(ImageInfo.name.split('.').last);
+      if (ImageInfo.name.split('.').last == 'png' ||
+          ImageInfo.name.split('.').last == 'jpg' ||
+          ImageInfo.name.split('.').last == 'jpeg') {
+        ImageInfo.whatIsIt = 'Image';
+        ImageInfo.decodedImage =
+            await decodeImageFromList(img.readAsBytesSync());
+        canIWorkWithImg = true;
+        canIWorkWithVid = false;
+        log('its an image!');
+        crpImg = img;
+        funcForImage();
+      } else {
+        ImageInfo.whatIsIt = 'Video';
+        log('Its a video!');
+
+        canIWorkWithImg = false;
+        canIWorkWithVid = true;
+        funcForVideo(img.absolute.path, 200, 48);
+      }
     }
   }
 
